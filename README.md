@@ -36,6 +36,8 @@ The selected certainty level is converted to an exact probability cutoff. For ex
 
 ## How to Use the App
 
+The app is currently hosted on shinyapps.io at https://steveneheil.shinyapps.io/ose-sample-calculator/
+
 1. Enter the total number of IEPs in the population being audited.
 2. Enter the number of IEPs included in the audit sample.
 3. Enter the percent of all IEPs that population noncompliance must exceed to indicate systemic noncompliance.
