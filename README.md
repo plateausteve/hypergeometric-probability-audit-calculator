@@ -51,3 +51,15 @@ shiny::runApp("OSE-app.R")
 ## Interpretation
 
 This calculator does not determine whether an individual IEP is compliant or noncompliant. That determination must come from the underlying audit review. The calculator addresses a narrower question: Given a finite population, a sample size, a systemic threshold, and a required certainty level, how many observed noncompliant IEPs are needed before the sample provides exact statistical evidence that population noncompliance exceeds the selected threshold?
+
+## License and Attribution
+
+This project is released under the MIT License. Others may use, copy, modify, and distribute the calculator, including for public or internal audit work, provided that the copyright and license notice are preserved.
+
+Suggested attribution:
+
+```text
+IEP Compliance Audit Calculator by Steven Heil.
+Licensed under the MIT License.
+https://github.com/plateausteve/hypergeometric-probability-audit-calculator
+```
