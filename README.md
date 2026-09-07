@@ -13,24 +13,24 @@ The calculator presents this result as an exact probability rather than primaril
 The threshold boundary is defined as:
 
 ```text
-K0 = floor(systemic threshold x total population)
+threshold_count = floor(systemic threshold x total population)
 ```
 
 This is the largest whole-number count of noncompliant IEPs that does not exceed the selected systemic threshold. The calculator then evaluates:
 
 ```text
-P(X >= x | N, K0, sample_n)
+P(X >= x | N, threshold_count, sample_n)
 ```
 
-where `N` is the total population size, `K0` is the threshold-boundary count, `sample_n` is the number of IEPs sampled, `X` is the random number of noncompliant IEPs that could appear in a sample of that size, and `x` is the observed number of noncompliant IEPs in the sample. In R, this is calculated as:
+where `N` is the total population size, `threshold_count` is the threshold-boundary count, `sample_n` is the number of IEPs sampled, `X` is the random number of noncompliant IEPs that could appear in a sample of that size if the population contained exactly `threshold_count` noncompliant IEPs, and `x` is the observed number of noncompliant IEPs in the sample. In R, this is calculated as:
 
 ```r
-phyper(q = x - 1, m = K0, n = N - K0, k = sample_n, lower.tail = FALSE)
+phyper(q = x - 1, m = threshold_count, n = N - threshold_count, k = sample_n, lower.tail = FALSE)
 ```
 
 The calculator uses `phyper()` from R's built-in `stats` package to compute exact hypergeometric tail probabilities. In R, `phyper(q, m, n, k, lower.tail = FALSE)` gives the probability of drawing more than `q` successes in a sample of size `k`, without replacement, from a finite population containing `m` successes and `n` non-successes.
 
-For this calculator, the arguments are mapped as follows: `K0` is the number of noncompliant IEPs at the threshold boundary, `N - K0` is the number of compliant IEPs at that boundary, `sample_n` is the audit sample size, and `x` is the observed number of noncompliant IEPs in the sample. The use of `q = x - 1` is intentional. With `lower.tail = FALSE`, R returns `P(X > q)`, so setting `q` to `x - 1` gives the desired probability `P(X >= x)`.
+For this calculator, the arguments are mapped as follows: `threshold_count` is the number of noncompliant IEPs at the threshold boundary, `N - threshold_count` is the number of compliant IEPs at that boundary, `sample_n` is the audit sample size, and `x` is the observed number of noncompliant IEPs in the sample. The use of `q = x - 1` is intentional. With `lower.tail = FALSE`, R returns `P(X > q)`, so setting `q` to `x - 1` gives the desired probability `P(X >= x)`.
 
 The selected certainty level is converted to an exact probability cutoff. For example, a 95% certainty requirement corresponds to a 5% probability cutoff. A sample result is treated as sufficient evidence of above-threshold population noncompliance when the exact upper-tail probability is less than or equal to that cutoff.
 

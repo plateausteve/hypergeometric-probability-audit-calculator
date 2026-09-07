@@ -14,7 +14,7 @@ make_hypergeom_lookup <- function(N, sample_n, threshold_pct, evidence_cutoff) {
     
     threshold <- threshold_pct / 100
     
-    K0 <- floor(threshold * N)
+    threshold_count <- floor(threshold * N)
     
     # Possible observed noncompliant counts in the sample
     x_values <- 0:sample_n
@@ -23,18 +23,18 @@ make_hypergeom_lookup <- function(N, sample_n, threshold_pct, evidence_cutoff) {
         N = N,
         sample_n = sample_n,
         threshold_pct = threshold_pct,
-        K0 = K0,
-        null_noncompliance_rate = K0 / N,
+        threshold_count = threshold_count,
+        null_noncompliance_rate = threshold_count / N,
         observed_noncompliant = x_values,
         observed_sample_rate = observed_noncompliant / sample_n
     ) |>
         mutate(
             # One-sided exact p-value:
-            # P(X >= observed x | N, K0, sample_n)
+            # P(X >= observed x | N, threshold_count, sample_n)
             exact_tail_probability = phyper(
                 q = observed_noncompliant - 1,
-                m = K0,
-                n = N - K0,
+                m = threshold_count,
+                n = N - threshold_count,
                 k = sample_n,
                 lower.tail = FALSE
             ),
@@ -221,12 +221,12 @@ server <- function(input, output, session) {
       filter(evidence_exceeds_threshold) |>
       slice_head(n = 1)
     
-    M_boundary <- floor((vals$threshold_pct / 100) * vals$N)
-    M_exceeds <- M_boundary + 1
+    threshold_count <- floor((vals$threshold_pct / 100) * vals$N)
+    exceeds_threshold_count <- threshold_count + 1
     
-    boundary_rate <- M_boundary / vals$N
-    exceeds_rate <- if (M_exceeds <= vals$N) {
-      M_exceeds / vals$N
+    boundary_rate <- threshold_count / vals$N
+    exceeds_rate <- if (exceeds_threshold_count <= vals$N) {
+      exceeds_threshold_count / vals$N
     } else {
       NA_real_
     }
@@ -255,7 +255,7 @@ server <- function(input, output, session) {
         "tail probability at or below ",
         cutoff_label,
         " when the population contains ",
-        M_boundary,
+        threshold_count,
         " noncompliant IEPs, the threshold-boundary count."
       )
     }
@@ -271,7 +271,7 @@ server <- function(input, output, session) {
       
       paste0(
         "Smallest population count above the systemic threshold = ",
-        M_exceeds,
+        exceeds_threshold_count,
         " (",
         percent(exceeds_rate, accuracy = 0.1),
         " of N)"
@@ -289,38 +289,39 @@ server <- function(input, output, session) {
       "Derived values\n",
       "Threshold boundary count = floor(",
       vals$threshold_pct, "% x ", vals$N, ") = ",
-      M_boundary, "\n",
+      threshold_count, "\n",
       "Threshold boundary rate = ",
       percent(boundary_rate, accuracy = 0.1), "\n",
       exceeds_text, "\n\n",
       
       "Exact hypergeometric probability calculation\n",
-      "This calculator uses the hypergeometric distribution because the audit sample is drawn\n",
+      "This calculator uses the hypergeometric distribution because the audit sample is drawn ",
       "without replacement from a finite population of IEPs.\n\n",
       
-      "For each possible observed sample count x, the calculator computes the exact probability\n",
+      "For each possible observed sample count x, the calculator computes the exact probability ",
       "of observing that many or more noncompliant IEPs when the population contains ",
-      M_boundary,
-      " noncompliant IEPs, the largest whole-number count that does not exceed the selected\n",
+      threshold_count,
+      " noncompliant IEPs, the largest whole-number count that does not exceed the selected ",
       "systemic threshold.\n\n",
       
       "Formula\n",
-      "P(X >= x | N, K0, sample_n)\n\n",
+      "P(X >= x | N, threshold_count, sample_n)\n\n",
       
       "where:\n",
       "N = total number of IEPs in the population\n",
-      "K0 = floor(systemic threshold x N), the largest whole-number count of noncompliant IEPs\n",
-      "     that does not exceed the selected systemic threshold\n",
-      "sample_n = number of IEPs sampled\n",
+      "threshold_count = floor(systemic threshold x N), the largest whole-number count of noncompliant IEPs ",
+      "that does not exceed the selected systemic threshold.\n",
+      "sample_n = number of IEPs sampled.\n",
+      "X = the random number of noncompliant IEPs that could appear in a sample of that size if the population contained exactly threshold_count noncompliant IEPs\n", 
       "x = observed number of noncompliant IEPs in the sample\n\n",
       
       "In R, this is calculated as:\n",
-      "phyper(q = x - 1, m = K0, n = N - K0, k = sample_n, lower.tail = FALSE)\n\n",
+      "phyper(q = x - 1, m = threshold_count, n = N - threshold_count, k = sample_n, lower.tail = FALSE)\n\n",
       
       "Certainty criterion\n",
-      "The selected certainty is converted to a corresponding exact probability cutoff:\n",
-      "certainty = 1 - exact probability cutoff.\n",
-      "A sample provides sufficient evidence of above-threshold population noncompliance when\n",
+      "The selected certainty is converted to a corresponding exact probability cutoff: ",
+      "certainty = 1 - exact probability cutoff. ",
+      "A sample provides sufficient evidence of above-threshold population noncompliance when ",
       "its exact tail probability is at or below that cutoff.\n\n",
       
       critical_statement,
@@ -436,10 +437,8 @@ server <- function(input, output, session) {
           filter(evidence_exceeds_threshold) |>
           slice_head(n = 1)
       
-      M_boundary <- floor((vals$threshold_pct / 100) * vals$N)
-      M_exceeds <- M_boundary + 1
-      boundary_rate <- M_boundary / vals$N
-      exceeds_rate <- if (M_exceeds <= vals$N) M_exceeds / vals$N else NA_real_
+      threshold_count <- floor((vals$threshold_pct / 100) * vals$N)
+      boundary_rate <- threshold_count / vals$N
       
       if (nrow(critical_row) == 0) {
           HTML(
@@ -447,7 +446,7 @@ server <- function(input, output, session) {
                 "<p>For this combination of total IEPs, sample size, systemic threshold, and required certainty, ",
                 "no possible sample result has an exact probability low enough to provide sufficient evidence that population noncompliance exceeds the systemic threshold.</p>",
                 "<p>The selected noncompliance threshold corresponds to <b>",
-                M_boundary,
+                threshold_count,
                 "</b> noncompliant IEPs, or <b>",
                 percent(boundary_rate),
                 "</b> of all IEPs at the school.</p>"
@@ -466,7 +465,7 @@ server <- function(input, output, session) {
                   percent(1 - vals$evidence_cutoff),
                   "</b> certainty criterion for sufficient evidence that population noncompliance exceeds the systemic threshold.</p>",
                   "<p>The selected threshold for systemic noncompliance would correspond to <b>",
-                  M_boundary,
+                  threshold_count,
                   "</b> noncompliant IEPs, or <b>",
                   percent(boundary_rate),
                   "</b> of all IEPs at the school."
