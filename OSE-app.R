@@ -60,6 +60,7 @@ make_hypergeom_lookup <- function(N, sample_n, threshold_pct, evidence_cutoff) {
             threshold_label = percent(threshold, accuracy = 0.1),
             null_noncompliance_rate_label = percent(null_noncompliance_rate, accuracy = 0.1),
             observed_sample_rate_label = percent(observed_sample_rate, accuracy = 0.1),
+            certainty_label = percent(1 - exact_tail_probability, accuracy = 0.1),
             exact_tail_probability_label = if_else(
               exact_tail_probability < 0.001,
                 "< .001",
@@ -251,8 +252,7 @@ server <- function(input, output, session) {
       critical_statement <- paste0(
         "Evidence threshold: Observing ",
         critical_row$observed_noncompliant,
-        " or more noncompliant IEPs in the sample produces an exact\n",
-        "tail probability at or below ",
+        " or more noncompliant IEPs in the sample produces an exact tail probability at or below ",
         cutoff_label,
         " when the population contains ",
         threshold_count,
@@ -307,7 +307,7 @@ server <- function(input, output, session) {
       "Formula\n",
       "P(X >= x | N, threshold_count, sample_n)\n\n",
       
-      "where:\n",
+      "Where:\n",
       "N = total number of IEPs in the population\n",
       "threshold_count = floor(systemic threshold x N), the largest whole-number count of noncompliant IEPs ",
       "that does not exceed the selected systemic threshold.\n",
@@ -318,7 +318,7 @@ server <- function(input, output, session) {
       "In R, this is calculated as:\n",
       "phyper(q = x - 1, m = threshold_count, n = N - threshold_count, k = sample_n, lower.tail = FALSE)\n\n",
       
-      "Certainty criterion\n",
+      "Certainty criterion: ",
       "The selected certainty is converted to a corresponding exact probability cutoff: ",
       "certainty = 1 - exact probability cutoff. ",
       "A sample provides sufficient evidence of above-threshold population noncompliance when ",
@@ -327,7 +327,7 @@ server <- function(input, output, session) {
       critical_statement,
       "\n\n",
       
-      "R documentation for phyper():\n",
+      "R documentation for phyper(): ",
       "https://stat.ethz.ch/R-manual/R-devel/library/stats/help/Hypergeometric.html"
     )
   })
@@ -338,9 +338,10 @@ server <- function(input, output, session) {
       transmute(
         `Observed noncompliant count in sample` = observed_noncompliant,
         `Observed noncompliant rate in sample` = observed_sample_rate_label,
-        `Exact probability at systemic threshold` = exact_tail_probability_label,
+        `Probability of systemic noncompliance in population` = certainty_label,
         `Systemic noncompliance threshold reached?` = if_else(evidence_exceeds_threshold, "Yes", "No"),
-        `Conclusion` = conclusion
+        `Conclusion` = conclusion,
+        row_status = if_else(evidence_exceeds_threshold, "Reached", "Not reached")
       )
     
     datatable(
@@ -350,9 +351,20 @@ server <- function(input, output, session) {
         pageLength = 10,
         autoWidth = TRUE,
         autoHideNavigation = TRUE,
-        searching = FALSE
+        searching = FALSE,
+        columnDefs = list(
+          list(visible = FALSE, targets = ncol(lookup) - 1)
+        )
       )
-    )
+    ) |>
+      formatStyle(
+        columns = names(lookup),
+        valueColumns = "row_status",
+        backgroundColor = styleEqual(
+          c("Not reached", "Reached"),
+          c("#e8f5e9", "#fde2e7")
+        )
+      )
   })
   
   output$certainty_plot <- renderPlot({
@@ -390,7 +402,7 @@ server <- function(input, output, session) {
       ) +
       labs(
         x = "Count of noncompliant IEPs in sample",
-        y = "Certainty corresponding to exact probability",
+        y = "Probability of systemic noncompliance",
         caption = "Points at or above the line provide sufficient evidence that population noncompliance exceeds the systemic threshold."
       ) +
       theme_minimal(base_size = 13)
