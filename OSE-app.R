@@ -338,8 +338,8 @@ server <- function(input, output, session) {
       transmute(
         `Observed noncompliant count in sample` = observed_noncompliant,
         `Observed noncompliant rate in sample` = observed_sample_rate_label,
-        `Exact probability of this many or more` = exact_tail_probability_label,
-        `Meets required certainty?` = if_else(evidence_exceeds_threshold, "Yes", "No"),
+        `Exact probability at systemic threshold` = exact_tail_probability_label,
+        `Systemic noncompliance threshold reached?` = if_else(evidence_exceeds_threshold, "Yes", "No"),
         `Conclusion` = conclusion
       )
     
