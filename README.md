@@ -22,7 +22,34 @@ This is the largest whole-number count of noncompliant IEPs that does not exceed
 P(X >= x | N, threshold_count, sample_n)
 ```
 
-where `N` is the total population size, `threshold_count` is the threshold-boundary count, `sample_n` is the number of IEPs sampled, `X` is the random number of noncompliant IEPs that could appear in a sample of that size if the population contained exactly `threshold_count` noncompliant IEPs, and `x` is the observed number of noncompliant IEPs in the sample. In R, this is calculated as:
+where `N` is the total population size, `threshold_count` is the threshold-boundary count, `sample_n` is the number of IEPs sampled, `X` is the random number of noncompliant IEPs that could appear in a sample of that size if the population contained exactly `threshold_count` noncompliant IEPs, and `x` is the observed number of noncompliant IEPs in the sample.
+
+The hypergeometric probability of observing exactly `j` noncompliant IEPs in the sample is:
+
+$$
+P(X = j) =
+\frac{
+  \binom{\text{threshold_count}}{j}
+  \binom{N - \text{threshold_count}}{\text{sample_n} - j}
+}{
+  \binom{N}{\text{sample_n}}
+}
+$$
+
+The calculator uses the corresponding upper-tail probability:
+
+$$
+P(X \ge x) =
+\sum_{j = x}^{\min(\text{sample_n}, \text{threshold_count})}
+\frac{
+  \binom{\text{threshold_count}}{j}
+  \binom{N - \text{threshold_count}}{\text{sample_n} - j}
+}{
+  \binom{N}{\text{sample_n}}
+}
+$$
+
+In R, this is calculated as:
 
 ```r
 phyper(q = x - 1, m = threshold_count, n = N - threshold_count, k = sample_n, lower.tail = FALSE)
