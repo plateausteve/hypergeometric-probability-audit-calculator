@@ -396,6 +396,11 @@ server <- function(input, output, session) {
       theme_minimal(base_size = 13)
     
     if (nrow(critical_row) > 0) {
+      x_max <- max(lookup$observed_noncompliant)
+      cutoff_label_y <- min(probability_cutoff + 0.04, 0.98)
+      decision_label_x <- min(critical_row$observed_noncompliant + 0.25, x_max)
+      decision_label_y <- 0.50
+      
       p <- p +
         geom_vline(
           xintercept = critical_row$observed_noncompliant,
@@ -404,23 +409,24 @@ server <- function(input, output, session) {
         ) +
         annotate(
           "text",
-          x = max(lookup$observed_noncompliant),
-          y = probability_cutoff,
+          x = x_max,
+          y = cutoff_label_y,
           label = paste0("Probability cutoff: ", percent(probability_cutoff)),
           hjust = 1,
-          vjust = 2,
+          vjust = 0,
           size = 5
         ) +
         annotate(
           "text",
-          x = critical_row$observed_noncompliant,
-          y = min(max(probability_cutoff / 2, 0.02), 0.10),
+          x = decision_label_x,
+          y = decision_label_y,
           label = paste0(
             "Cutoff reached at ",
             critical_row$observed_noncompliant,
             " or more"
           ),
-          hjust = -0.05,
+          hjust = 0,
+          vjust = 0.5,
           size = 5
         )
     }
