@@ -47,13 +47,13 @@ make_hypergeom_lookup <- function(N, sample_n, threshold_pct, evidence_cutoff) {
                        threshold_pct, 
                        "% at minimum ",
                        100 * (1 - evidence_cutoff),
-                       "% certainty."
+                       "% evidence."
                 ),
                 paste0("Does not flag systemic noncompliance at or above ",
                       threshold_pct,
                       "% at minimum ",
                       100 * (1 - evidence_cutoff),
-                      "% certainty."
+                      "% evidence."
                 )
             )
         ) |>
@@ -63,7 +63,7 @@ make_hypergeom_lookup <- function(N, sample_n, threshold_pct, evidence_cutoff) {
             systemic_rate_label = percent(systemic_count / N, accuracy = 0.1),
             boundary_noncompliance_rate_label = percent(boundary_noncompliance_rate, accuracy = 0.1),
             observed_sample_rate_label = percent(observed_sample_rate, accuracy = 0.1),
-            certainty_label = percent(1 - exact_tail_probability, accuracy = 0.1),
+            evidence_label = percent(1 - exact_tail_probability, accuracy = 0.1),
             exact_tail_probability_label = if_else(
               exact_tail_probability < 0.001,
                 "< .001",
@@ -131,8 +131,8 @@ ui <- fluidPage(
             ),
             
             numericInput(
-                inputId = "certainty",
-                label = "4. Choose the required percent certainty for treating the sample as evidence of systemic noncompliance.",
+                inputId = "evidence",
+                label = "4. Choose the required percent evidence for treating the sample as evidence of systemic noncompliance.",
                 value = 95,
                 min = 50,
                 max = 99,
@@ -148,7 +148,7 @@ ui <- fluidPage(
             
             h3("Sample Evidence Relative to the Systemic Threshold"),
             
-            plotOutput("certainty_plot", height = "350px"),
+            plotOutput("evidence_plot", height = "350px"),
             
             h3("Lookup Table by Observed Sample Count"),
             
@@ -182,8 +182,8 @@ server <- function(input, output, session) {
     N <- as.integer(input$N)
     sample_n <- as.integer(input$sample_n)
     threshold_pct <- input$threshold_pct
-    certainty <- input$certainty
-    evidence_cutoff <- 1 - (certainty/100)
+    evidence <- input$evidence
+    evidence_cutoff <- 1 - (evidence/100)
     
     validate(
       need(!is.na(N) && N >= 1, "N must be at least 1."),
@@ -191,15 +191,15 @@ server <- function(input, output, session) {
       need(sample_n <= N, "Sample size n cannot exceed total IEP count N."),
       need(!is.na(threshold_pct) && threshold_pct >= 0 && threshold_pct <= 100,
            "Threshold percent must be between 0 and 100."),
-      need(!is.na(certainty) && certainty >= 50 && certainty < 100,
-           "Certainty must be at least 50 and less than 100.")
+      need(!is.na(evidence) && evidence >= 50 && evidence < 100,
+           "Evidence level must be at least 50 and less than 100.")
     )
     
     list(
       N = N,
       sample_n = sample_n,
       threshold_pct = threshold_pct,
-      certainty = certainty,
+      evidence = evidence,
       evidence_cutoff = evidence_cutoff
     )
   })
@@ -260,14 +260,14 @@ server <- function(input, output, session) {
     }
     
     paste0(
-      "Inputs\n",
+      "Inputs:\n",
       "Population N = ", vals$N, "\n",
       "Sample n = ", vals$sample_n, "\n",
       "Systemic threshold = ", vals$threshold_pct, "% of N\n",
-      "Required certainty = ", vals$certainty, "%\n",
+      "Required evidence = ", vals$evidence, "%\n",
       "Corresponding exact probability cutoff = ", cutoff_label, "\n\n",
       
-      "Derived values\n",
+      "Derived values:\n",
       "Minimum systemic noncompliance count = ceiling(",
       vals$threshold_pct, "% x ", vals$N, ") = ",
       systemic_count, "\n",
@@ -286,24 +286,24 @@ server <- function(input, output, session) {
       " noncompliant IEPs, the largest whole-number count below the selected ",
       "systemic threshold.\n\n",
       
-      "Formula\n",
-      "P(X >= x | N, boundary_count, sample_n)\n\n",
+      "Formula:\n",
+      "P(X >= x | boundary_count, N, n)\n\n",
       
       "Where:\n",
+      "boundary_count = max(systemic_count - 1, 0), the largest whole-number count below the selected systemic threshold.\n",
       "N = total number of IEPs in the population\n",
       "systemic_count = ceiling(systemic threshold x N), the smallest whole-number count of noncompliant IEPs ",
       "that meets the selected systemic threshold.\n",
-      "boundary_count = max(systemic_count - 1, 0), the largest whole-number count below the selected systemic threshold.\n",
-      "sample_n = number of IEPs sampled.\n",
+      "n = number of IEPs sampled.\n",
       "X = the random number of noncompliant IEPs that could appear in a sample of that size if the population contained exactly boundary_count noncompliant IEPs\n", 
       "x = observed number of noncompliant IEPs in the sample\n\n",
       
       "In R, this is calculated as:\n",
       "phyper(q = x - 1, m = boundary_count, n = N - boundary_count, k = sample_n, lower.tail = FALSE)\n\n",
       
-      "Certainty criterion: ",
-      "The selected certainty is converted to a corresponding exact probability cutoff: ",
-      "exact probability cutoff = 1 - certainty. ",
+      "Evidence criterion: ",
+      "The selected evidence is converted to a corresponding exact probability cutoff: ",
+      "exact probability cutoff = 1 - evidence. ",
       "A sample provides sufficient evidence of systemic noncompliance in the population when ",
       "its exact tail probability is at or below that cutoff.\n\n",
       
@@ -321,8 +321,8 @@ server <- function(input, output, session) {
       transmute(
         `Observed noncompliant count in sample` = observed_noncompliant,
         `Observed noncompliant rate in sample` = observed_sample_rate_label,
-        `Probability of systemic noncompliance in population` = certainty_label,
-        `Systemic noncompliance threshold reached?` = if_else(evidence_reaches_threshold, "Yes", "No"),
+        `Evidence level` = evidence_label,
+        `Evidence threshold reached?` = if_else(evidence_reaches_threshold, "Yes", "No"),
         `Conclusion` = conclusion,
         row_status = if_else(evidence_reaches_threshold, "Reached", "Not reached")
       )
@@ -350,13 +350,13 @@ server <- function(input, output, session) {
       )
   })
   
-  output$certainty_plot <- renderPlot({
+  output$evidence_plot <- renderPlot({
     
     vals <- validated_inputs()
     lookup <- lookup_data() |>
-      mutate(certainty_level = 1 - exact_tail_probability)
+      mutate(evidence_level = 1 - exact_tail_probability)
     
-    selected_certainty <- vals$certainty / 100
+    selected_evidence <- vals$evidence / 100
     
     critical_row <- lookup |>
       filter(evidence_reaches_threshold) |>
@@ -366,13 +366,13 @@ server <- function(input, output, session) {
       lookup,
       aes(
         x = observed_noncompliant,
-        y = certainty_level
+        y = evidence_level
       )
     ) +
       geom_line(linewidth = 1) +
       geom_point(size = 2) +
       geom_hline(
-        yintercept = selected_certainty,
+        yintercept = selected_evidence,
         linetype = "dashed",
         linewidth = 0.8
       ) +
@@ -400,8 +400,8 @@ server <- function(input, output, session) {
         annotate(
           "text",
           x = max(lookup$observed_noncompliant),
-          y = selected_certainty,
-          label = paste0("Required certainty: ", percent(selected_certainty)),
+          y = selected_evidence,
+          label = paste0("Required evidence: ", percent(selected_evidence)),
           hjust = 1,
           vjust = 2,
           size = 5
@@ -411,7 +411,7 @@ server <- function(input, output, session) {
           x = critical_row$observed_noncompliant,
           y = 0.10,
           label = paste0(
-            "Required certainty reached at ",
+            "Required evidence reached at ",
             critical_row$observed_noncompliant,
             " or more"
           ),
@@ -439,7 +439,7 @@ server <- function(input, output, session) {
       if (nrow(critical_row) == 0) {
           HTML(
               paste0(
-                "<p>For this combination of total IEPs, sample size, systemic threshold, and required certainty, ",
+                "<p>For this combination of total IEPs, sample size, systemic threshold, and required evidence, ",
                 "no possible sample result has an exact probability low enough to provide sufficient evidence that population noncompliance meets the systemic threshold.</p>",
                 "<p>The selected noncompliance threshold corresponds to <b>",
                 systemic_count,
@@ -455,18 +455,18 @@ server <- function(input, output, session) {
                   critical_row$observed_noncompliant,
                   " or more</b> noncompliant IEPs in the sample of <b>",
                   vals$sample_n,
-                  "</b>, the exact probability of observing that many or more noncompliant IEPs when the population is just below the systemic threshold is at or below <b>",
+                  "</b>, the exact probability of observing that many or more noncompliant IEPs is at or below <b>",
                   percent(vals$evidence_cutoff),
-                  "</b>. This meets the selected <b>",
+                  "</b> when population noncompliance is just below the systemic noncompliance threshold. This meets the selected <b>",
                   percent(1 - vals$evidence_cutoff),
-                  "</b> certainty criterion for sufficient evidence that population noncompliance meets the systemic threshold.</p>",
-                  "<p>The selected threshold for systemic noncompliance would correspond to <b>",
+                  "</b> evidence criterion for flagging the results as above the systemic noncompliance threshold.</p>",
+                  "<p>The selected threshold for systemic noncompliance corresponds to <b>",
                   systemic_count,
                   "</b> noncompliant IEPs, or <b>",
                   percent(systemic_rate),
-                  "</b> of all IEPs at the school. The exact calculation compares the sample against <b>",
+                  "</b> of all IEPs at in the population. The exact calculation uses <b>",
                   boundary_count,
-                  "</b> noncompliant IEPs, the largest whole-number count below that threshold."
+                  "</b> noncompliant IEPs as the comparison point because it is the largest whole-number count still below that threshold."
               )
           )
       }
