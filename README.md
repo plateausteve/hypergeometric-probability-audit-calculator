@@ -45,10 +45,10 @@ The hypergeometric probability of observing exactly `j` noncompliant IEPs in the
 $$
 P(X = j) =
 \frac{
-  \binom{\text{boundary_count}}{j}
-  \binom{N - \text{boundary_count}}{\text{sample_n} - j}
+  \binom{\text{boundary count}}{j}
+  \binom{N - \text{boundary count}}{\text{sample n} - j}
 }{
-  \binom{N}{\text{sample_n}}
+  \binom{N}{\text{sample n}}
 }
 $$
 
@@ -62,12 +62,12 @@ The calculator uses the corresponding upper-tail probability:
 
 $$
 P(X \ge x) =
-\sum_{j = x}^{\min(\text{sample_n}, \text{boundary_count})}
+\sum_{j = x}^{\min(\text{sample n}, \text{boundary count})}
 \frac{
-  \binom{\text{boundary_count}}{j}
-  \binom{N - \text{boundary_count}}{\text{sample_n} - j}
+  \binom{\text{boundary count}}{j}
+  \binom{N - \text{boundary count}}{\text{sample n} - j}
 }{
-  \binom{N}{\text{sample_n}}
+  \binom{N}{\text{sample n}}
 }
 $$
 
